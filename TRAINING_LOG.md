@@ -208,7 +208,7 @@ python scripts/reinforcement_learning/rsl_rl/train.py \
 | 耗时 | 1 小时 31 分钟 |
 | 吞吐 | ~60k steps/s |
 | 并行环境数 | 4096 |
-| 地形课程 | 推进到 terrain_level 5.4 |
+| 地形课程 | 推进到 terrain_level 5.6 |
 | 最终迭代 | 1499/1500 |
 | checkpoint | `model_1499.pt` |
 
@@ -259,7 +259,7 @@ Critic MLP: Linear(235→512) → ELU → Linear(512→256) → ELU
 | `track_lin_vel_xy_exp`（奖励↑） | 0.005 | 1.078 | **1.228** |
 | `error_vel_xy`（误差↓） | 0.015 | 0.473 | **0.353** |
 | `error_vel_yaw`（误差↓） | 0.017 | 0.492 | **0.416** |
-| 存活率 time_out | ~0.03 | — | **~0.88** |
+| 存活率 time_out | ~0.03 | — | **0.916** |
 
 **结论**：机器人在粗糙地形课程（难度逐步增加）上学会了稳定站立 + 按指令速度行走。
 误差曲线先升后降是正常的——curriculum 会逐步加大指令幅度，中段波动后回归收敛。

@@ -140,6 +140,7 @@ Isaac Lab 内置了多种足式机器人任务，改 `scripts/train.sh` 中的 `
 
 ## 更多信息
 
+- **从 0 到 1 手工构建 + 测试案例 + 实测结果**：[TRAINING.md](./TRAINING.md) ← 推荐入口
 - 完整训练过程、踩坑记录、网络约束、依赖冲突处理：[TRAINING_LOG.md](./TRAINING_LOG.md)
 - 从 0 到 1 手工搭建环境（含业务目的讲解）：[SETUP_GUIDE.md](./SETUP_GUIDE.md)
 - GPU 性能剖析（Nsight Compute/Systems）：[NSIGHT_COMPUTE_GUIDE.md](./NSIGHT_COMPUTE_GUIDE.md)、[NSIGHT_COMPUTE_UBUNTU.md](./NSIGHT_COMPUTE_UBUNTU.md)

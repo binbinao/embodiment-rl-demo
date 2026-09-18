@@ -45,32 +45,36 @@ ncu-ui                    # 打开 GUI，然后 File → Open 加载 .ncu-rep
 ncu-ui report.ncu-rep     # 直接打开某个报告
 ```
 
-### 2.3 本机（headless 服务器）的限制 ⚠️
+### 2.3 本机（xrdp 远程桌面）的限制 ⚠️
 
-本机是无显示器的服务器：
+本机通过 **xrdp（RDP）远程桌面**访问，有完整 GUI 桌面（`Xorg :10` + `gnome-shell`）。
 
-```bash
-$ echo $DISPLAY        # 空
-$ echo $WAYLAND_DISPLAY # 空
+但 **`ncu-ui` GUI 仍无法启动**，实测报错：
+
+```
+qt.glx: qglx_findConfig: Failed to finding matching FBConfig ...
+Could not initialize GLX
+Application could not be initialized!
 ```
 
-**直接 `ncu-ui` 会失败**（报 `Cannot open display` 或 Qt 无显示错误）。
+**根本原因**：`ncu-ui` 是 Qt 6 应用，需要 **OpenGL 2.0+ 的硬件 GLX 上下文**。而 xrdp 的 Xorg 后端（xorgxrdp）只提供**旧版软件 GLX**，找不到匹配的 FBConfig。这不是"没 GUI"，而是"**有桌面但缺 GPU 加速的 OpenGL**"——xrdp 的经典限制。
 
-### 2.4 在 headless 服务器上用 GUI 的三种方案
+> 即使用 `QT_OPENGL=software LIBGL_ALWAYS_SOFTWARE=1` 强制软件渲染，实测仍报同样的 GLX 错误。
 
-| 方案 | 命令 | 适用场景 |
+### 2.4 在本机用 GUI 的实用方案
+
+| 方案 | 做法 | 评价 |
 |---|---|---|
-| **① SSH X11 转发**（本机已配好 X11 转发，`SSH_CONNECTION` 在） | `ssh -X user@server` 后 `ncu-ui` | 本地有 X 客户端（Linux/Mac 装了 XQuartz） |
-| **② 拷回本地打开** | `scp report.ncu-rep local:` 后本地装 Nsight Compute 打开 | 最省事，报告文件可跨机器 |
-| **③ VNC/虚拟桌面** | 装 xvfb + VNC | 需要完整桌面体验时 |
+| **① 本地 GUI 打开报告（推荐）** | 服务器 `ncu --export report.ncu-rep` → `scp` 拷回 Mac/Windows → 本地装 Nsight Compute GUI 打开 | 官方标准工作流，报告跨平台自包含，最可靠 |
+| **② 修 xrdp 的 GLX** | 改 `/etc/xrdp/xorg.conf` 启用 glamor + 驱动 | 深坑，xrdp glamor 支持不完整，成功率低，不推荐 |
 
-**推荐方案 ②**：报告文件 `.ncu-rep` 是自包含的，拷到任何有 Nsight Compute 的机器都能打开，不依赖服务器图形环境。
+**推荐方案 ①**：Nsight Compute 官方提供 macOS / Windows / Linux 三种 GUI 安装包，在 Mac 或 Windows 本地装一个，服务器上只用 CLI 导出报告。
 
 ---
 
-## 3. CLI 工具（ncu）—— headless 服务器的首选
+## 3. CLI 工具（ncu）—— 本机 xrdp 桌面的首选
 
-**业务目的**：在无图形界面的服务器上，`ncu` 是唯一能直接用的 Nsight Compute 工具。它不需要 GUI，采样结果以文本/CSV 输出。
+**业务目的**：在本机 xrdp 桌面（GLX 软件版）上，`ncu-ui` GUI 起不来，`ncu` CLI 是能直接用的 Nsight Compute 工具。它不需要 GUI，采样结果以文本/CSV 输出。
 
 ### 3.1 基本用法
 
@@ -113,7 +117,7 @@ ncu --launch-skip 200 --launch-count 10 --set full \
 
 ---
 
-## 4. 典型工作流（headless 服务器标准流程）
+## 4. 典型工作流（本机 xrdp 标准流程）
 
 ```
 ① CLI 采样（服务器上）
@@ -132,7 +136,7 @@ ncu --launch-skip 200 --launch-count 10 --set full \
    ncu-ui x.ncu-rep
 ```
 
-**核心思想**：**在服务器上跑 CLI 采样（不需要图形），在本地跑 GUI 分析（需要图形）**。两者通过 `.ncu-rep` 报告文件解耦。
+**核心思想**：**在服务器上跑 CLI 采样（不依赖 GLX），在本地（Mac/Windows）跑 GUI 分析（本地有完整 GPU/OpenGL）**。两者通过 `.ncu-rep` 报告文件解耦。
 
 ---
 
@@ -140,7 +144,7 @@ ncu --launch-skip 200 --launch-count 10 --set full \
 
 | 问题 | 原因 | 解决 |
 |---|---|---|
-| `ncu-ui` 报 `Cannot open display` | headless 服务器无 X 服务 | 用 SSH -X、拷报告回本地、或改用 CLI `ncu` |
+| `ncu-ui` 报 `Could not initialize GLX` | xrdp 的 Xorg 后端是软件 GLX，缺 Qt6 需要的 OpenGL 2.0+ 硬件上下文 | 拷 `.ncu-rep` 报告到本地 GUI 打开，或改用 CLI `ncu` |
 | `ncu` 报权限不足（`ERR_NVGPUCTRPERM`） | 未启用 perf counter 权限 | 关闭 MIG、或用 `sudo ncu`，生产环境看 [NVIDIA 官方权限文档](https://developer.nvidia.com/err-nvgpuctrperm) |
 | `ncu` 让程序极慢 | 每个 kernel 重放采样 | 用 `--launch-count` 限制、`--kernel-name` 过滤 |
 | 找不到 `ncu-ui` | 只装了 CLI（CUDA toolkit 部分安装） | 用 `ncu` 导出报告，GUI 分析放到有完整安装的机器 |
@@ -149,8 +153,8 @@ ncu --launch-skip 200 --launch-count 10 --set full \
 
 ## 6. 一句话总结
 
-> Ubuntu 上 Nsight Compute 有两个形态：**GUI `ncu-ui`（看报告用，需图形界面）** 和 **CLI `ncu`（采样用，headless 服务器首选）**。
-> 本机是 headless 服务器，所以**采样用 `ncu` CLI，分析用本地 `ncu-ui` GUI 打开 `.ncu-rep` 报告**——两者靠报告文件解耦。
+> Ubuntu 上 Nsight Compute 有两个形态：**GUI `ncu-ui`（看报告用，需 GPU 加速的 OpenGL）** 和 **CLI `ncu`（采样用，任何环境可用）**。
+> 本机是 xrdp 远程桌面，有桌面但 GLX 是软件版，`ncu-ui` 起不来。所以**采样用 `ncu` CLI（服务器上），分析用本地 GUI（Mac/Windows 装 Nsight Compute）打开 `.ncu-rep` 报告**——两者靠报告文件解耦。
 
 ---
 

@@ -11,7 +11,7 @@
 | 平地 | Flat-Unitree-Go2 | 300 | ~3 分钟 | 0.004 → **1.432** |
 | 粗糙地形 | Rough-Unitree-Go2 | 1500 | ~1.5 小时 | 0.005 → **1.228** |
 
-最终策略在粗糙地形课程（terrain_level 5.4）上稳定站立 + 按指令行走，存活率 ~88%。
+最终策略在粗糙地形课程（terrain_level 5.6）上稳定站立 + 按指令行走，存活率 ~92%。
 
 ## 快速开始（评估已有策略）
 
@@ -52,6 +52,23 @@ bash scripts/train.sh flat --max_iterations 500
 
 训练产物默认写入 `$ISAACLAB_PATH/logs/rsl_rl/`（TensorBoard 曲线 + checkpoint）。
 
+也可以走一键启动脚本（环境激活 + 训练前/后 GPU 快照，适合配合监控软件观测）：
+
+```bash
+bash run.sh flat                  # ~3 分钟
+bash run.sh rough                 # ~1.5 小时
+ITER_LOOP=3 bash run.sh flat      # 连续训练 3 轮，保持 GPU 长时间满载
+```
+
+GPU 性能剖析（Nsight Systems / Nsight Compute，输出报告到 `/tmp/`）：
+
+```bash
+bash scripts/profile.sh nsys flat   # 全局时间线
+bash scripts/profile.sh ncu rough   # kernel 级深挖
+```
+
+用法详见 [NSIGHT_COMPUTE_GUIDE.md](./NSIGHT_COMPUTE_GUIDE.md)。
+
 ## 查看训练曲线
 
 ```bash
@@ -65,14 +82,22 @@ tensorboard --logdir $ISAACLAB_PATH/logs/rsl_rl
 
 ```
 .
+├── README.md                        # 本文件：快速上手 + 成果总览
 ├── TRAINING_LOG.md                  # 完整训练记录（环境搭建/踩坑/收敛指标）
+├── SETUP_GUIDE.md                   # 从 0 到 1 手工搭建环境（含业务目的讲解）
+├── NSIGHT_COMPUTE_GUIDE.md          # Nsight Compute/Systems 调优指南（run.sh 外围包裹）
+├── NSIGHT_COMPUTE_UBUNTU.md         # Ubuntu 上 ncu 的 GUI/CLI 两种形态用法
+├── run.sh                           # 一键启动（环境激活 + GPU 快照 + 训练，支持 ITER_LOOP 连续压测）
 ├── scripts/
 │   ├── activate.sh                  # 环境激活（环境变量 + EULA）
 │   ├── train.sh                     # 训练（flat/rough）
-│   └── eval.sh                      # 评估 + 录视频
+│   ├── eval.sh                      # 评估 + 录视频
+│   └── profile.sh                   # nsys/ncu 三种采样模式封装
 └── artifacts/
     ├── flat/model_299.pt            # 平地策略 checkpoint
     ├── rough/model_1499.pt          # 粗糙地形策略 checkpoint
+    ├── rough/exported/policy.pt     # 导出的 PyTorch 策略
+    ├── rough/exported/policy.onnx   # 导出的 ONNX 策略（跨框架部署）
     └── video/rl-video-step-0.mp4    # 评测视频
 ```
 
@@ -115,4 +140,6 @@ Isaac Lab 内置了多种足式机器人任务，改 `scripts/train.sh` 中的 `
 
 ## 更多信息
 
-完整的训练过程、踩坑记录、网络约束、依赖冲突处理，见 [TRAINING_LOG.md](./TRAINING_LOG.md)。
+- 完整训练过程、踩坑记录、网络约束、依赖冲突处理：[TRAINING_LOG.md](./TRAINING_LOG.md)
+- 从 0 到 1 手工搭建环境（含业务目的讲解）：[SETUP_GUIDE.md](./SETUP_GUIDE.md)
+- GPU 性能剖析（Nsight Compute/Systems）：[NSIGHT_COMPUTE_GUIDE.md](./NSIGHT_COMPUTE_GUIDE.md)、[NSIGHT_COMPUTE_UBUNTU.md](./NSIGHT_COMPUTE_UBUNTU.md)
